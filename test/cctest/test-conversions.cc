@@ -438,7 +438,7 @@ TEST(DoubleToShortestSingle) {
 
 
 TEST(DoubleToFixed) {
-  const int kBufferSize = 128;
+  const int kBufferSize = 168;
   char buffer[kBufferSize];
   StringBuilder builder(buffer, kBufferSize);
   int flags = DoubleToStringConverter::EMIT_POSITIVE_EXPONENT_SIGN |
@@ -462,25 +462,98 @@ TEST(DoubleToFixed) {
   CHECK_EQ("0.0", builder.Finalize());
 
   DOUBLE_CONVERSION_ASSERT(DoubleToStringConverter::kMaxFixedDigitsBeforePoint == 60);
-  DOUBLE_CONVERSION_ASSERT(DoubleToStringConverter::kMaxFixedDigitsAfterPoint == 60);
+  DOUBLE_CONVERSION_ASSERT(DoubleToStringConverter::kMaxFixedDigitsAfterPoint == 100);
+
+  // Most of the 100 digit tests were copied from
+  // https://searchfox.org/mozilla-central/source/js/src/tests/non262/Number/toFixed-values.js.
+
   builder.Reset();
   CHECK(dc.ToFixed(
       0.0, DoubleToStringConverter::kMaxFixedDigitsAfterPoint, &builder));
-  CHECK_EQ("0.000000000000000000000000000000000000000000000000000000000000",
+  CHECK_EQ("0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
            builder.Finalize());
 
   builder.Reset();
   CHECK(dc.ToFixed(
       9e59, DoubleToStringConverter::kMaxFixedDigitsAfterPoint, &builder));
   CHECK_EQ("899999999999999918767229449717619953810131273674690656206848."
-           "000000000000000000000000000000000000000000000000000000000000",
+           "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
            builder.Finalize());
 
   builder.Reset();
   CHECK(dc.ToFixed(
       -9e59, DoubleToStringConverter::kMaxFixedDigitsAfterPoint, &builder));
   CHECK_EQ("-899999999999999918767229449717619953810131273674690656206848."
-           "000000000000000000000000000000000000000000000000000000000000",
+           "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+           builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc.ToFixed(
+      1e-100, DoubleToStringConverter::kMaxFixedDigitsAfterPoint, &builder));
+  CHECK_EQ("0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+           builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc.ToFixed(0.3000000000000000444089209850062616169452667236328125,
+                   DoubleToStringConverter::kMaxFixedDigitsAfterPoint,
+                   &builder));
+  CHECK_EQ("0.3000000000000000444089209850062616169452667236328125000000000000000000000000000000000000000000000000",
+           builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc.ToFixed(1.5e-100,
+                   DoubleToStringConverter::kMaxFixedDigitsAfterPoint,
+                   &builder));
+  CHECK_EQ("0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+           builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc.ToFixed(1.15e-99,  // In reality: 1.14999999999999992147301128036734...
+                   DoubleToStringConverter::kMaxFixedDigitsAfterPoint,
+                   &builder));
+  CHECK_EQ("0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011",
+           builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc.ToFixed(3.141592653589793,
+                   DoubleToStringConverter::kMaxFixedDigitsAfterPoint,
+                   &builder));
+  CHECK_EQ("3.1415926535897931159979634685441851615905761718750000000000000000000000000000000000000000000000000000",
+           builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc.ToFixed(1.0,
+                   DoubleToStringConverter::kMaxFixedDigitsAfterPoint,
+                   &builder));
+  CHECK_EQ("1.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+           builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc.ToFixed(-123456.78,
+                   DoubleToStringConverter::kMaxFixedDigitsAfterPoint,
+                   &builder));
+  CHECK_EQ("-123456.7799999999988358467817306518554687500000000000000000000000000000000000000000000000000000000000000000",
+           builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc.ToFixed(123456.78,
+                   DoubleToStringConverter::kMaxFixedDigitsAfterPoint,
+                   &builder));
+  CHECK_EQ("123456.7799999999988358467817306518554687500000000000000000000000000000000000000000000000000000000000000000",
+           builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc.ToFixed(100000000000000000000.0,
+                   DoubleToStringConverter::kMaxFixedDigitsAfterPoint,
+                   &builder));
+  CHECK_EQ("100000000000000000000.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+           builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc.ToFixed(-100000000000000000000.0,
+                   DoubleToStringConverter::kMaxFixedDigitsAfterPoint,
+                   &builder));
+  CHECK_EQ("-100000000000000000000.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
            builder.Finalize());
 
   builder.Reset();
@@ -636,6 +709,10 @@ TEST(DoubleToFixed) {
   builder.Reset();
   CHECK(dc5.ToFixed(0.1, 30, &builder));
   CHECK_EQ("0.100000000000000005551115123126", builder.Finalize());
+
+  builder.Reset();
+  CHECK(dc5.ToFixed(0.1, 100, &builder));
+  CHECK_EQ("0.1000000000000000055511151231257827021181583404541015625000000000000000000000000000000000000000000000", builder.Finalize());
 
   builder.Reset();
   CHECK(dc5.ToFixed(0.1, 17, &builder));
@@ -1995,14 +2072,14 @@ static double StrToD(const char* str, int flags, double empty_string_value,
                      uc16 separator = StringToDoubleConverter::kNoSeparator) {
   StringToDoubleConverter converter(flags, empty_string_value, Double::NaN(),
                                     NULL, NULL, separator);
-  double result = converter.StringToDouble(str, strlen(str),
+  int len = static_cast<int>(strlen(str));
+  double result = converter.StringToDouble(str, len,
                                            processed_characters_count);
   *processed_all =
       ((strlen(str) == static_cast<unsigned>(*processed_characters_count)));
 
   uc16 buffer16[256];
   DOUBLE_CONVERSION_ASSERT(strlen(str) < DOUBLE_CONVERSION_ARRAY_SIZE(buffer16));
-  int len = strlen(str);
   for (int i = 0; i < len; i++) {
     buffer16[i] = str[i];
   }
@@ -4109,25 +4186,25 @@ static float StrToF16(const uc16* str16, int length, int flags,
                       bool* processed_all) {
   StringToDoubleConverter converter(flags, empty_string_value, Double::NaN(),
                                     NULL, NULL);
-  double result =
+  float result =
       converter.StringToFloat(str16, length, processed_characters_count);
   *processed_all = (length == *processed_characters_count);
   return result;
 }
 
 
-static double StrToF(const char* str, int flags, double empty_string_value,
-                     int* processed_characters_count, bool* processed_all) {
+static float StrToF(const char* str, int flags, double empty_string_value,
+                    int* processed_characters_count, bool* processed_all) {
   StringToDoubleConverter converter(flags, empty_string_value, Single::NaN(),
                                     NULL, NULL);
-  float result = converter.StringToFloat(str, strlen(str),
+  int len = static_cast<int>(strlen(str));
+  float result = converter.StringToFloat(str, len,
                                          processed_characters_count);
   *processed_all =
       ((strlen(str) == static_cast<unsigned>(*processed_characters_count)));
 
   uc16 buffer16[256];
   DOUBLE_CONVERSION_ASSERT(strlen(str) < DOUBLE_CONVERSION_ARRAY_SIZE(buffer16));
-  int len = strlen(str);
   for (int i = 0; i < len; i++) {
     buffer16[i] = str[i];
   }
@@ -5811,4 +5888,90 @@ TEST(StringToDoubleCaseInsensitiveSpecialValues) {
 
   CHECK_EQ(1.0, converter.StringToDouble("+inf", 4, &processed));
   CHECK_EQ(0, processed);
+}
+
+
+TEST(StringToTemplate) {
+    // Test StringToDoubleConverter::StringTo<T>.
+
+    const StringToDoubleConverter converter(StringToDoubleConverter::ALLOW_HEX, 0.0, Double::NaN(), "inf", "nan");
+
+    // First simply check conversion from "0" and "1":
+    for (int i = 0; i <= 1; ++i)
+    {
+        const char c = '0' + i;
+
+        int processed = 0;
+        CHECK_EQ(static_cast<double>(i), converter.StringTo<double>(&c, 1, &processed));
+        CHECK_EQ(1, processed);
+
+        processed = 0;
+        CHECK_EQ(static_cast<float>(i), converter.StringTo<float>(&c, 1, &processed));
+        CHECK_EQ(1, processed);
+
+        const uc16 buffer16[1] = { static_cast<uc16>(c) };
+
+        processed = 0;
+        CHECK_EQ(static_cast<double>(i), converter.StringTo<double>(buffer16, 1, &processed));
+        CHECK_EQ(1, processed);
+
+        processed = 0;
+        CHECK_EQ(static_cast<float>(i), converter.StringTo<float>(buffer16, 1, &processed));
+        CHECK_EQ(1, processed);
+    }
+    {
+        // A number that can be represented by a double, but not by a float.
+        // Allows testing that StringTo<double> behaves like StringToDouble
+        // (and not like StringToFloat).
+        const char buffer[] = "1e+100";
+        const int length = DOUBLE_CONVERSION_ARRAY_SIZE(buffer) - 1;
+
+        int processed1 = 1;
+        int processed2 = 2;
+
+        CHECK_EQ(converter.StringToDouble(buffer, length, &processed1),
+                 converter.StringTo<double>(buffer, length, &processed2));
+        CHECK_EQ(processed1, processed2);
+
+        uc16 buffer16[DOUBLE_CONVERSION_ARRAY_SIZE(buffer)];
+
+        for (int i = 0; i <= length; ++i) {
+            buffer16[i] = buffer[i];
+        }
+
+        processed1 = 1;
+        processed2 = 2;
+
+        CHECK_EQ(converter.StringToDouble(buffer16, length, &processed1),
+                 converter.StringTo<double>(buffer16, length, &processed2));
+        CHECK_EQ(processed1, processed2);
+    }
+    {
+        // The double rounding example from TEST(StringToFloatHexString), which
+        // yields a slightly different result from StringToFloat than from
+        // StringToDouble. Allows testing that StringTo<float> behaves like
+        // StringToFloat (rather than like StringToDouble). 
+        const char buffer[] = "0x100000100000008";
+        const int length = DOUBLE_CONVERSION_ARRAY_SIZE(buffer) - 1;
+
+        int processed1 = 1;
+        int processed2 = 2;
+
+        CHECK_EQ(converter.StringToFloat(buffer, length, &processed1),
+                 converter.StringTo<float>(buffer, length, &processed2));
+        CHECK_EQ(processed1, processed2);
+
+        uc16 buffer16[DOUBLE_CONVERSION_ARRAY_SIZE(buffer)];
+
+        for (int i = 0; i <= length; ++i) {
+            buffer16[i] = buffer[i];
+        }
+
+        processed1 = 1;
+        processed2 = 2;
+
+        CHECK_EQ(converter.StringToFloat(buffer16, length, &processed1),
+                 converter.StringTo<float>(buffer16, length, &processed2));
+        CHECK_EQ(processed1, processed2);
+    }
 }
